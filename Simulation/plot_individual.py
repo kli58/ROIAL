@@ -11,7 +11,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-def plot_gp_2D(gx, gy, obj_func,mu, X_train_i,X_train_j, Y_train, title,save_folder = '', posterior = False,trial_num = '',save = False,safe = 0.17,plot_sample = True):
+def plot_gp_2D(gx, gy, obj_func,mu, X_train_i,X_train_j, Y_train, title,save_folder = '',trial_num = '',save = False,b1_true = 0.33,b1_thresh = -0.5,plot_sample = True):
     
    
     fig = plt.figure(figsize=(10,5))
@@ -31,10 +31,13 @@ def plot_gp_2D(gx, gy, obj_func,mu, X_train_i,X_train_j, Y_train, title,save_fol
         ax2.scatter(X_train_j, X_train_i, s=2*np.arange(len(X_train_j)),cmap=cm.coolwarm, c=Y_train)
    
     plt.suptitle(title)
-    if safe:
-        level = [0,safe]
-        ax.contourf(gx, gy, obj_func, level,colors = ['k','w'],alpha=0.2)
-        ax2.contourf(gx, gy, obj_func, level,colors = ['k','w'],alpha=0.2)
+    if b1_thresh:
+        if np.min(mu) < b1_thresh:
+            level_alg = [np.min(mu),b1_thresh]
+            ax2.contourf(gx, gy, mu.reshape(gx.shape), level_alg,colors = ['k','w'],alpha=0.2)
+        level_true = [0,b1_true]
+        ax.contourf(gx, gy, obj_func, level_true,colors = ['k','w'],alpha=0.2)
+        
     if save:
         fig.savefig(save_folder + title + '_' + str(trial_num) + '.png')
 
@@ -86,8 +89,8 @@ def norm_objective_data(data):
     return norm_data
 
 def plot_results(save_folder,state_dim,run_num,feedback,safe_thresh = 0,
-                 b1 = False,posterior =False,save= False, or_length = 1,lamb = 0,
-                 title = None, or_est_len = 0,gif = False):
+                 b1 = False,posterior_change =False,save= False, or_length = 1,lamb = 0,
+                 title = None, or_est_len = 0,subset = False):
     filename = save_folder + 'dim' + str(state_dim) + '_run_' \
                     + str(run_num)  +'.mat'  
     
@@ -96,19 +99,18 @@ def plot_results(save_folder,state_dim,run_num,feedback,safe_thresh = 0,
     objective_values = io.loadmat(filename)['norm_data']
     objective_values = norm_objective_data(objective_values)
     
-    
-    if 'add' in filename:
+    or_true = [0,io.loadmat(filename)['sub_params']['ord_b1'][0]]
+    ord_b1 = io.loadmat(filename)['sub_params']['ord_b1'][0]
+    if subset:
         add_file = save_folder + 'dim' + str(state_dim) + '_run_' + str(run_num)  +'_post_process.mat'
-        posterior_list =  io.loadmat(add_file)['posterior_mean']
-        or_true = [0,io.loadmat(filename)['add_params']['ord_b1'][0]]
-        ord_b1 = io.loadmat(filename)['add_params']['ord_b1'][0]
-        sampled_idx = io.loadmat(filename)['sampled_flt_idx']
+        posterior_list =  io.loadmat(add_file)['posterior_mean']        
+        sampled_idx = io.loadmat(filename)['sampled_flt_idx'].flatten()
+        b1_alg_org = io.loadmat(filename)['ord_thresh_est'].flatten()[0]
     else:
         posterior_list = io.loadmat(filename)['posterior_mean']
-        or_true = [0,io.loadmat(filename)['params']['ord_b1'][0]]
-        ord_b1 = io.loadmat(filename)['params']['ord_b1'][0]
+        b1_alg_org = io.load(filename)['ord_thresh_est'].flatten()[0]
         sampled_idx = io.loadmat(filename)['sampled_point_idx'].flatten()
-    ord_b1 = np.percentile(objective_values,ord_b1 * 100)
+    #ord_b1 = np.percentile(objective_values,ord_b1 * 100)
     if state_dim == 1:
         posterior_cov_inverse = io.loadmat(filename)['posterior_cov_inverse']
         points_to_sample = io.loadmat(filename)['points_to_sample']
@@ -129,7 +131,7 @@ def plot_results(save_folder,state_dim,run_num,feedback,safe_thresh = 0,
         mean = shifted_mean/np.max(shifted_mean)
         cov = np.linalg.inv(posterior_model['post_cov_inverse'][0])/ (np.max(shifted_mean)**2)
         ims = []
-        if posterior:
+        if posterior_change:
             for i in range(len(posterior_list)):
                 samp_idx = sampled_idx[:i+1]
                 post_mean = posterior_list[i]
@@ -169,28 +171,26 @@ def plot_results(save_folder,state_dim,run_num,feedback,safe_thresh = 0,
         y_vals = np.linspace(0, num_pts[1], num_pts[1])
         Y, X = np.meshgrid(x_vals, y_vals)
          
-        #fig = plt.figure(figsize = (7.2, 4.76))
-        #ax = fig.gca(projection='3d')
-        #surf = ax.plot_surface(Y, X, sample, cmap=cm.coolwarm, linewidth=0, alpha=0.2,antialiased=False)
-        X_train_i =[]
-        X_train_j = []
-        Y_train = []
-        for i in range(len(sampled_idx)):
-            idx = sampled_idx[i]
-            m = int(idx/num_pts[0])
-            n = idx%num_pts[0]
-            X_train_i.append(m)
-            X_train_j.append(n)
-            Y_train.append(objective_values.flatten()[sampled_idx[i]])
-            if posterior:
+   
+        X_train = np.unravel_index(sampled_idx, num_pts)
+        Y_train = objective_values.flatten()[sampled_idx]
+        X_train_i = np.squeeze(X_train[0])
+        X_train_j = np.squeeze(X_train[1])
+       
+    
+        if posterior_change:
+            for i in range(len(sampled_idx)):
                 post_mean = posterior_list[i]
                 min_val = np.min(post_mean)
                 shifted_mean = (post_mean - min_val)
                 mean = shifted_mean/np.max(shifted_mean)
-                plot_gp_2D(Y,X, objective_values,mean, X_train_i,X_train_j, Y_train,title,save_folder,posterior,trial_num = i,save=save,safe = ord_b1)          
-            else:
-                plot_gp_2D(Y,X, objective_values,mean, X_train_i,X_train_j, Y_train,title,save_folder,posterior,trial_num = i,save=save,safe = ord_b1)  
-                break
+                # mean = norm_objective_data(post_mean)
+                b1_alg = (b1_alg_org - min_val)/np.max(shifted_mean)
+                plot_gp_2D(Y,X, objective_values,mean, X_train_i[0:i],X_train_j[0:i], Y_train[0:i],title,save_folder,trial_num = i,save=save,b1_true = ord_b1,b1_thresh= b1_alg)          
+        else:
+            mean = norm_objective_data(posterior_list[-1])
+            plot_gp_2D(Y,X, objective_values,mean, X_train_i,X_train_j, Y_train[0:i],title,save_folder,trial_num = i,save=save,b1_true= ord_b1,b1_thresh = b1_alg)  
+            
     if state_dim == 3:
         num_pts = [20, 20,20]   # 30-by-30 grid
         x_vals = np.linspace(0, num_pts[0], num_pts[0])
@@ -216,7 +216,7 @@ def plot_results(save_folder,state_dim,run_num,feedback,safe_thresh = 0,
         posterior_3d = posterior_3d.reshape(num_pts)
         for j in range(num_pts[2]):
             mean = posterior_3d[:,:,j]
-            plot_gp_2D(Y,X, objective_values[:,:,j],mean, X_train_i,X_train_j, Y_train,title + str(j),save_folder,posterior,trial_num = i,save=save,safe = ord_b1,plot_sample = False)  
+            plot_gp_2D(Y,X, objective_values[:,:,j],mean, X_train_i,X_train_j, Y_train,title + str(j),save_folder,trial_num = i,save=save,safe = ord_b1,plot_sample = False)  
                 
         
         #mu = posterior_model['mean']     
@@ -289,26 +289,8 @@ def plot_add_GP_results(save_folder,state_dim,run_num,feedback,safe_thresh = 0,
 
 if __name__ == '__main__':
     
-#    feedback = 'ord_pref_coactive_IG_saf_0.0_ord_0.1'
-    feedback = 'ord_pref_coactive_IG_saf_0.0_ord_0.1'
-#    save_folder = '/Users/amyli/Desktop/CalTech/gitrepo/Results/2020_09_17_11_' + feedback + '/'
-    #save_folder = '/Users/amyli/Desktop/CalTech/gitrepo/Results/2020_08_24_14_' + feedback + '/'
-    #save_folder = '/home/amyli/Documents/Results/2020_09_17_11_' + feedback + '/'
-    save_folder = '/home/amyli/Documents/Results/2020_09_23_16_add_ord_pref_coactive_RD_10_saf_0.0/'
-    #save_folder = 'C:/Users/amykj/Documents/Results/2020_08_28_11_' + feedback + '/'
-    state_dim = 3
-    run_num = range(1)
-#     for i in run_num:
-    #      plt.close('all')
-#          plot_add_GP_results(save_folder,state_dim,i, feedback,b1 = False, posterior = True,save = True,or_length = 1,post = True)
-    # plt.close('all')
-
-    # feedback = 'ord_pref_TS'
-    # #save_folder = '/home/amyli/Documents/Results/2020_06_29_15_' + feedback + '/'
-    # #save_folder = '/home/amyli/Documents/Results/2020_06_29_09_' + feedback + '/'
-    # save_folder = '/home/amyli/Documents/Results/2020_07_07_11_' + feedback + '/'
-    # state_dim = 2
-#    run_num = range(1)
-    for run_num in run_num:
-        plot_results(save_folder,state_dim,run_num, feedback,posterior = True, lamb = 0.0,title = ' slice ', save=True)
-    plt.close('all')
+    save_folder = '/Users/amyli/Desktop/Results/ord_pref_RD_100/'
+    plot_results(save_folder,state_dim = 2,run_num = 0, feedback = '',posterior_change = True, subset = True)
+# for run_num in run_num:
+#     plot_results(save_folder,state_dim,run_num, feedback,posterior = True, lamb = 0.0,title = ' slice ', save=True)
+# plt.close('all')
