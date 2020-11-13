@@ -133,28 +133,26 @@ def run_GP(filename,feedback_type,sub_params,save_folder,run_num,log_file):
       
     ord_labels = []
     pref_labels = []
-    coactive_label = []
+
     sampled_idx = {}
     sampled_multi_idx = []
     pref_idxs = []
     ord_idxs = []
-    coactive_idxs = []
+
     posterior_mean_list = []
-    decomp_list = []
+
     sampled_flt_idx = []
-    sampled_coord_points = []
     posterior_mean_whole = np.zeros(grid_shape)
     relab_sampled_idx = []
     pref_idxs_post = []
-    coactive_idxs_post = []
-    sampled_virtual_idx = []
+ 
     cts = 0
     
     # return a randon idx
     joint_idx =  tuple([random.randint(0,grid_shape[i]-1) for i in range(D)])
     
     for t in range(1,iterations):
-        #run evidence maximization every N_cyc iterations
+       
         print('iteration: ',t)
         
         flt_idx = np.ravel_multi_index(joint_idx, grid_shape)
@@ -163,7 +161,7 @@ def run_GP(filename,feedback_type,sub_params,save_folder,run_num,log_file):
             pts = cts
             cts += 1
             sampled_idx[pts] =flt_idx
-            sampled_coord_points.append(points_to_sample[flt_idx])
+            #sampled_coord_points.append(points_to_sample[flt_idx])
         else:
             print('flt_idx: ',flt_idx)
             print('sampled_idx: ',sampled_idx)
@@ -176,16 +174,15 @@ def run_GP(filename,feedback_type,sub_params,save_folder,run_num,log_file):
 
         if 'pref' in feedback_type and len(sampled_flt_idx) > 0:
             preference = get_preference(tuple(joint_idx),tuple(sampled_multi_idx[-1]), objective,add_GP = True,noise = sub_params['model_params']['pref_nos'])
-            #pref_idxs.append([joint_idx, sampled_idx[-1]])
             
-            pref_idxs.append([pts, relab_sampled_idx[-1]]) #TODO: assume no action will be sampled again
+            pref_idxs.append([pts, relab_sampled_idx[-1]]) 
             pref_label = [1 - preference, preference]
             pref_labels.append(pref_label)
             
             pref_idxs_post.append([flt_idx,sampled_flt_idx[-1]])
         
          #TODO check which one should be deleted sampled_flt_idx or sampled_idx (which is a dictionary)
-        sampled_flt_idx.append(flt_idx) #actual flatten index corresponding to action space
+        sampled_flt_idx.append(flt_idx) # flatten index corresponding to the actions in the action space
         relab_sampled_idx.append(pts) # index determined by the order of sampling 
         sampled_multi_idx.append(tuple(joint_idx))
         ord_idxs.append(pts)
@@ -196,9 +193,9 @@ def run_GP(filename,feedback_type,sub_params,save_folder,run_num,log_file):
         
         if sub_params['dropout_method'] == 'RD':
             print('start rd')
-            actions_to_sample = list(set(actions) - set(sampled_flt_idx) - set(sampled_virtual_idx))
+            actions_to_sample = list(set(actions) - set(sampled_flt_idx)) #do not include points already sampled
             if sub_params['rd_sz'] == num_action:
-                sub_idx_rand = actions
+                sub_idx_rand = actions 
             else:
                 sub_idx_rand = random.sample(actions_to_sample, sub_params['rd_sz'])
         
@@ -236,6 +233,7 @@ def run_GP(filename,feedback_type,sub_params,save_folder,run_num,log_file):
 
         print('sampled action: ', sampled_action)
         joint_idx = sampled_action
+        
         #update subplane posterior
         sub_whole_idx = np.unravel_index(sub_whole_idx, grid_shape)
         posterior_mean_whole[sub_whole_idx] = posterior_mean
@@ -246,8 +244,8 @@ def run_GP(filename,feedback_type,sub_params,save_folder,run_num,log_file):
         posterior_mean_list.append(posterior_mean_whole.copy())
 
     io.savemat(save_folder + 'dim' + str(D) + '_run_' + str(run_num)  +'.mat', { 'pref_labels': pref_labels,'ord_labels':ord_labels, 'sub_params':sub_params,
-            'posterior_mean':posterior_mean_list,'decomp':decomp_list,'ord_thresh_true':ordinal_threshold,'ord_thresh_est':ordinal_threshold_estimate,
-            'sampled_point_idx':sampled_idx,'sampled_multi_idx':sampled_multi_idx,'sampled_flt_idx':sampled_flt_idx,'pref_idx_post':pref_idxs_post,
+            'posterior_mean':posterior_mean_list,'ord_thresh_true':ordinal_threshold,'ord_thresh_est':ordinal_threshold_estimate,
+            'sampled_point_idx':sampled_idx,'sampled_flt_idx':sampled_flt_idx,'pref_idx_post':pref_idxs_post,
             'norm_data':objective})
     
         
@@ -271,9 +269,9 @@ def run_simulation(root_directory,feedback_type,sub_params,save_folder = ''):
 
     for i in sub_params['run_nums']:
         #load objective functions
-        if 'hart' in file_part:
+        if 'hart' in file_part: #load hartmann function
             filename = file_part
-        else:
+        else: #load synthetic function
             filename = file_part + str(i) + '.mat'
         data = io.loadmat(filename)
         objective_function = data['sample']

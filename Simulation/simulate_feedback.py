@@ -106,8 +106,8 @@ def determine_ordinal_threshold(num_category, b1_val, delta_t,objective_function
         b[1] = np.percentile(objective_function, 100*b1_val)
         val = b1_val
         for i in range(2,num_category):
-            print(delta_t[i-2])
-            print(val)
+            #print(delta_t[i-2])
+            #print(val)
             val = val + delta_t[i-2]
             b[i] = np.percentile(objective_function,100*val)
     else:
