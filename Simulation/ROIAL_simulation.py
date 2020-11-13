@@ -19,7 +19,7 @@ def run_individual_GP(feedback_type,params,GP_prior_cov,GP_prior_cov_inv,data,f_
     tr = params['curr_trials'] 
     ordinal_threshold_estimate = params['ord_threshold_estimate']
     ordinal_noise = params['ordinal_noise']
-    saf_thresh = params['saf_thresh']
+    saf_thresh = params['lambda']
     preference_noise = params['pref_noise']
    
     #setup specfic feedback-related params
@@ -191,13 +191,13 @@ def run_GP(filename,feedback_type,sub_params,save_folder,run_num,log_file):
        
         sub_idx_rand = [] 
         
-        if sub_params['dropout_method'] == 'RD':
-            print('start rd')
-            actions_to_sample = list(set(actions) - set(sampled_flt_idx)) #do not include points already sampled
-            if sub_params['rd_sz'] == num_action:
-                sub_idx_rand = actions 
-            else:
-                sub_idx_rand = random.sample(actions_to_sample, sub_params['rd_sz'])
+        #if sub_params['select_method'] == 'RD':
+        print('start rd')
+        actions_to_sample = list(set(actions) - set(sampled_flt_idx)) #do not include points already sampled
+        if sub_params['rd_sz'] == num_action:
+            sub_idx_rand = actions 
+        else:
+            sub_idx_rand = random.sample(actions_to_sample, sub_params['rd_sz'])
         
         sub_whole_idx = np.append(list(sampled_idx.values()),sub_idx_rand)
 
@@ -258,7 +258,7 @@ def run_simulation(root_directory,feedback_type,sub_params,save_folder = ''):
         key = '_' + str(sub_params['rd_sz'])
         if sub_params['model_params']['ord_nos']:
             key += '_noise_' + str(sub_params['model_params']['ord_nos'])
-        save_folder = root_directory + '/Results/' + dt_string + '_sub_' + '_'.join(feedback_type) + '_' +sub_params['dropout_method'] + key +'_saf_' + str(sub_params['model_params']['saf_thresh'])+'/'
+        save_folder = root_directory + '/Results/' + dt_string + '_sub_' + '_'.join(feedback_type) + '_RD' + key +'_lambda_' + str(sub_params['model_params']['lambda'])+'/'
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder) 
 
@@ -290,7 +290,7 @@ if __name__ == '__main__':
     root_directory = dirname(dirname(dirname(file_dir))) 
     feedback_type = ['ord','pref']
     model_params = {'ord_nos':0,'pref_nos':0.06,'signal_variance': 1.0, 'lengthscales': [0.15, 0.15,0.15],'GP_noise_var': 0.01,
-                 'IG_it':1000,'query_type':'IG','saf_thresh': 0.0, 'saf_method': 'none',
+                 'IG_it':1000,'query_type':'IG','lambda': 0.0, 'saf_method': 'none',
                  'pref_noise':0.015,'num_category':5, 'ordinal_noise':0.1}
     
     delta_int = 2/model_params['num_category']
@@ -298,8 +298,8 @@ if __name__ == '__main__':
     ordinal_threshold_estimate[0] = -0.5
     model_params['ord_threshold_estimate'] = ordinal_threshold_estimate
     model_params['saf_method'] = 'IG_ucb'
-    model_params['saf_thresh'] = -0.45
-    sub_params = {'model_params':model_params,'dropout_method':'RD','rd_sz':500,'run_nums': range(1),'num_trials':10,'D':3,'num_category':5,'ord_perct':False,
+    model_params['lambda'] = -0.45
+    sub_params = {'model_params':model_params,'rd_sz':500,'run_nums': range(1),'num_trials':10,'D':3,'num_category':5,'ord_perct':False,
                    'ord_b1':0.33,'ord_delta':[0.2,0.15,0.13],'file_part': file_dir + '/Sampled_functions_2D/30_by_30/Sampled_objective_'}
     sub_params['file_part'] = file_dir + '/Sampled_functions_3D/Sampled_objective_' 
     run_simulation(root_directory,feedback_type,sub_params)

@@ -67,7 +67,7 @@ def information_gain_acquisition(sampled_idxs,OR_point_idxs,OR_labels,
     IG = []
     
    
-    if method == 'IG_ucb' and saf_thresh: #TODO: change this to safe constrain
+    if method == 'IG_ucb' and saf_thresh: 
             ucb = mean + saf_thresh * sigma
             safe_idx = [p for p in range(num_features) if ucb[p] > ord_thresh[0]]
     

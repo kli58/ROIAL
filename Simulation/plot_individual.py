@@ -188,8 +188,12 @@ def plot_results(save_folder,state_dim,run_num,feedback,safe_thresh = 0,
                 b1_alg = (b1_alg_org - min_val)/np.max(shifted_mean)
                 plot_gp_2D(Y,X, objective_values,mean, X_train_i[0:i],X_train_j[0:i], Y_train[0:i],title,save_folder,trial_num = i,save=save,b1_true = ord_b1,b1_thresh= b1_alg)          
         else:
-            mean = norm_objective_data(posterior_list[-1])
-            plot_gp_2D(Y,X, objective_values,mean, X_train_i,X_train_j, Y_train[0:i],title,save_folder,trial_num = i,save=save,b1_true= ord_b1,b1_thresh = b1_alg)  
+            post_mean = posterior_list[-1]
+            min_val = np.min(post_mean)
+            shifted_mean = (post_mean - min_val)
+            mean = shifted_mean/np.max(shifted_mean)
+            b1_alg = (b1_alg_org - min_val)/np.max(shifted_mean)
+            plot_gp_2D(Y,X, objective_values,mean, X_train_i,X_train_j, Y_train,title,save_folder,trial_num = len(posterior_list),save=save,b1_true= ord_b1,b1_thresh = b1_alg)  
             
     if state_dim == 3:
         num_pts = [20, 20,20]   # 30-by-30 grid
