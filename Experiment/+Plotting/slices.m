@@ -1,4 +1,4 @@
-function plotResultsSlices(save_folder,posterior_mean,h)
+function slices(save_folder,posterior_mean,h)
 
 screensize = get( 0, 'Screensize' );
 

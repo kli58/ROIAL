@@ -1,4 +1,4 @@
-function plotIterations(save_folder)
+function iterations(save_folder)
 
 if save_folder(end) ~= '/'
     save_folder = [save_folder, '/'];
@@ -22,7 +22,7 @@ for i = 1:size(posterior_mean_whole,1)
     
     title(t,sprintf('Iteration %i',i+1),'FontWeight','Bold');
     curPosterior = posterior_mean_whole(i,:);
-    plotResultsSlices(save_folder,curPosterior,h);
+    Plotting.slices(save_folder,curPosterior,h);
         
     % add compared actions with their ordinal labels to iteration plot
     for j = 0:1
