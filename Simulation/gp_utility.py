@@ -209,7 +209,7 @@ def preference_GP_objective(f, pref_data, pref_labels, HG_points, HG_regions,
         label = pref_labels[i]
         z = (f[data_pts[label]] - f[data_pts[1-label]]) / preference_noise
         obj -= np.log(sigmoid(z))
-        obj -= np.sum(np.log(sigmoid(z)))
+        #obj -= np.sum(np.log(sigmoid(z)))
         #print('processed pref')
         
     if len(OR_points):
