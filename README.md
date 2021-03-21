@@ -5,7 +5,7 @@ The following video gives a quick introduction to the algorithm
 
 
 ## Simulation code
-A detailed description of the hyperparameter used in simulation can be found [here](https://github.com/kli58/ROIAL/blob/master/Simulation/ROIAL_hyperparameters.ipynb)
+A detailed description and specific values of the hyperparameter used in simulation can be found [here](https://github.com/kli58/ROIAL/blob/master/Simulation/ROIAL_hyperparameters.ipynb)
 
 Example scripts to run the simulation can be found inside the simulation folder
 - [2D Simulation](https://github.com/kli58/ROIAL/blob/master/Simulation/run_2D_simulation.ipynb) 
